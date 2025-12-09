@@ -13,7 +13,7 @@ The design is filter-agnostic: although the initial implementation uses a probab
 
 ---
 
-## **Rewritten Features**
+## **Features**
 
 * **Disk-backed storage with constant memory usage**
   Only one chunk is ever held in memory, allowing the filter to grow extremely large without increasing RAM consumption.
