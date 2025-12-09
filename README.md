@@ -3,7 +3,7 @@
 ![Que Banner](/docs/banner.jpg)
 
 
-[que](https://www.npmjs.com/package/que) | ![npm](https://img.shields.io/npm/v/que.svg)
+[que](https://www.npmjs.com/package/que-io) | ![npm](https://img.shields.io/npm/v/que-io.svg)
 
 ## **Introduction**
 
@@ -72,7 +72,7 @@ npm run demo
 Install via npm:
 
 ```bash
-npm install que
+npm install que-io
 ```
 
 ---
@@ -82,7 +82,7 @@ npm install que
 This example demonstrates how to use `que` as a fast, disk-backed membership engine to verify whether a user credential pair *may* exist—without hitting the database every time.
 
 ```js
-const Que = require("que");
+const Que = require("que-io");
 
 (async () => {
     // Create or load the filter
