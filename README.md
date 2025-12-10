@@ -21,9 +21,6 @@ The design is filter-agnostic: although the initial implementation uses a probab
 * **Chunked architecture for scalable performance**
   Efficient loading and flushing of fixed-size chunks minimizes disk I/O and enables high-throughput workloads.
 
-* **Filter-agnostic core**
-  The engine is not tied to a specific algorithm. The current release uses a fast probabilistic bit-vector implementation, but the design supports adding more filter types later.
-
 * **Deterministic hashing pipeline**
   Reliable and stable hashing over user-defined attributes (email, password, username, etc.) ensures consistent membership checks.
 
@@ -56,7 +53,8 @@ Measured on a standard SSD:
 
 | Operation | Average Time |
 | --------- | ------------ |
-| Addition  | ~0.92 ms     |
+| Addition  | ~0.92-1.41 ms     |
+| Addition (dangerously)  | ~0.66-0.80 ms     |
 | Lookup    | ~0.80 ms     |
 
 For testing benchmarks on your device, run:
@@ -153,16 +151,43 @@ Must be called before any operation unless auto-loaded by the constructor.
 
 ---
 
-#### **`await que.add(payload)`**
+#### **`await que.add(payloadOrArray, config)`**
 
-Adds an item to the filter.
+Adds one or more items to the filter.
 All relevant bits are set across the necessary chunks.
 
-Example:
+**Parameters:**
+
+* `payloadOrArray` — A single payload object or an array of payloads.
+* `config` — Optional configuration object:
+
+  * `dangerously` (boolean, default `false`) — If `true` and an array of payloads is provided, all bit indices for all payloads are computed first and written in a single loop.
+    This **improves performance** but sacrifices atomicity and resilience to interruptions.
+
+**Examples:**
 
 ```js
+// Atomic addition of a single payload
 await que.add({ email: "john@example.com", password: "123" });
+
+// Atomic addition of multiple payloads (default behavior)
+await que.add([
+    { email: "alice@example.com", password: "abc" },
+    { email: "bob@example.com", password: "xyz" }
+]);
+
+// Dangerous batch mode — faster, non-atomic
+await que.add([
+    { email: "alice@example.com", password: "abc" },
+    { email: "bob@example.com", password: "xyz" }
+], { dangerously: true });
 ```
+
+**Notes:**
+
+* **Atomic mode:** Each payload is added independently; a crash affects only the current payload.
+* **Dangerous mode:** All indices are computed first; bits are set in a single pass. If the process crashes mid-loop, some payloads may only be partially added.
+* Sorting of indices and removal of duplicates is handled internally for performance.
 
 ---
 
