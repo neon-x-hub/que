@@ -1,6 +1,6 @@
 {
   "name": "que-io",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "high-performance, disk-backed membership engine designed for applications that demand extremely fast lookups with minimal memory usage.",
   "main": "index.js",
   "scripts": {
