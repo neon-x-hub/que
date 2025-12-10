@@ -31,31 +31,40 @@ function randomEmail() {
 
     await que.load();
 
-    // 3. Simulate a batch of mixed additions
-    console.log("Adding elements...");
-    const additions = [];
+    // 3. Prepare batch of payloads
+    const additions = [
+        { email: "admin@example.com", password: "root123" },
+        { email: "user@example.com", password: "pass" }
+    ];
 
-    // add some deterministic entries
-    additions.push({ email: "admin@example.com", password: "root123" });
-    additions.push({ email: "user@example.com", password: "pass" });
-
-    // add random ones
     for (let i = 0; i < 10; i++) {
         additions.push({ email: randomEmail(), password: "password" });
     }
 
-    const startAdd = Date.now();
+    // 4a. Atomic additions (normal)
+    console.log("Adding elements atomically...");
+    let startAdd = Date.now();
     for (const payload of additions) {
         await que.add(payload);
         console.log(`   ✔ Added: ${payload.email}`);
     }
-    const endAdd = Date.now();
+    let endAdd = Date.now();
+    const atomicAvg = (endAdd - startAdd) / additions.length;
     console.log(`Done in ${endAdd - startAdd}ms`);
-    console.log(`Average addition time: ${(endAdd - startAdd) / additions.length}ms`);
+    console.log(`Average atomic addition time: ${atomicAvg.toFixed(3)}ms\n`);
 
-    console.log("\n");
+    // 4b. Dangerous batch addition
+    console.log("Adding elements in dangerous batch mode...");
+    // regenerate payloads for fair test
+    const batchAdditions = additions.map(p => ({ ...p }));
+    startAdd = Date.now();
+    await que.add(batchAdditions, { dangerously: true });
+    endAdd = Date.now();
+    const batchAvg = (endAdd - startAdd) / batchAdditions.length;
+    console.log(`Done in ${endAdd - startAdd}ms`);
+    console.log(`Average dangerous batch addition time: ${batchAvg.toFixed(3)}ms\n`);
 
-    // 4. Testing — includes true positives, false positives, and guaranteed negatives
+    // 5. Testing — includes true positives, false positives, and guaranteed negatives
     console.log("Testing membership...");
     const tests = [
         { email: "admin@example.com", password: "root123" }, // true
@@ -74,10 +83,9 @@ function randomEmail() {
     }
     const endTest = Date.now();
     console.log(`Testing took ${endTest - startTest}ms`);
-    console.log(`Average lookup time: ${(endTest - startTest) / tests.length}ms`);
-    console.log("\n");
+    console.log(`Average lookup time: ${((endTest - startTest) / tests.length).toFixed(3)}ms\n`);
 
-    // 5. Show theoretical filter behavior for fun
+    // 6. Show theoretical filter behavior for fun
     console.log("Filter properties:");
     console.log(`   Expected FPR: 0.1%`);
     console.log(`   Bits per entry: ${(bits / 1_000_000).toFixed(2)}`);
