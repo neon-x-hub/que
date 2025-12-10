@@ -36,17 +36,57 @@ class Que {
         await this.chunkManager.flush();
     }
 
-    async add(payload) {
-        const serialized = FilterCore.serializePayload(payload, this.attributes);
-        const bitIndices = FilterCore.getIndices(serialized, this.totalBits, this.k);
+    /**
+     * Add a single payload or an array of payloads to the filter.
+     * If an array is provided and the `dangerously` option is set to true,
+     * all payloads will be added in a single, atomic operation.
+     * Otherwise, each payload will be added individually.
+     * @param {object|array[]|object[]} payloadOrArray - single payload or array of payloads
+     * @param {object} config - configuration object with optional `dangerously` property
+     * @returns {Promise<void>}
+     */
+    async add(payloadOrArray, config = {}) {
+        const { dangerously = false } = config;
 
-        for (const idx of bitIndices) {
+        // single or non-dangerous
+        if (!dangerously || !Array.isArray(payloadOrArray)) {
+            const payload = Array.isArray(payloadOrArray) ? payloadOrArray[0] : payloadOrArray;
+            const serialized = FilterCore.serializePayload(payload, this.attributes);
+            const bitIndices = FilterCore.getIndices(serialized, this.totalBits, this.k);
+
+            for (const idx of bitIndices) {
+                await this.chunkManager.setBit(idx);
+            }
+
+            await this.chunkManager.flush();
+            return;
+        }
+
+        // Dangerous
+        const allBitIndices = [];
+
+        for (const payload of payloadOrArray) {
+            const serialized = FilterCore.serializePayload(payload, this.attributes);
+            const indices = FilterCore.getIndices(serialized, this.totalBits, this.k);
+            allBitIndices.push(...indices);
+        }
+
+        const uniqueIndices = [...new Set(allBitIndices)];
+
+        for (const idx of uniqueIndices) {
             await this.chunkManager.setBit(idx);
         }
 
         await this.chunkManager.flush();
     }
 
+    /**
+     * Tests whether a payload may exist in the filter.
+     * If any bit associated with the payload is unset, the function returns false.
+     * Otherwise, it returns true.
+     * @param {object} payload - object with keys defined in attributes
+     * @returns {Promise<boolean>} true if the payload may exist, false otherwise
+     */
     async test(payload) {
         const serialized = FilterCore.serializePayload(payload, this.attributes);
         const bitIndices = FilterCore.getIndices(serialized, this.totalBits, this.k);
