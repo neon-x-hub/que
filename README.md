@@ -1,4 +1,4 @@
-# **que**
+# **que** - fast, disk-backed membership engine built for massive, memory-efficient lookups
 
 ![Que Banner](/docs/banner.jpg)
 
